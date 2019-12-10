@@ -1,6 +1,6 @@
 # MUWS - MultiUserWebServer 
 
-Author: Ben Jefferson  
+Author: Ben Jefferson
 Copyright: Huddersfield New College 2019 <http://huddnewcoll.ac.uk/>
 
 MUWS is provided freely as open source software, under the GNU AFFERO GENERAL PUBLIC LICENSE (see LICENSE.txt)
@@ -43,7 +43,35 @@ The project currently comprises 3 core components:
 3. Copy `scripts/multiUserWebServer.conf.default` to `scripts/multiUserWebServer.conf` and then edit `scripts/multiUserWebServer.conf_ to contain appropriate values
 4. Run `makeUsers.sh` from the command line - this will finish off the installation by installing the neccessary Cron and Apache configuration files
 
+## Using MUWS
+Once MUWS has been configured any users in the specified LDAP group (see the LDAP section of `scripts/multiUserWebServer.conf` ) will be automatically created as new users.
+
+### User functionality
+Users can...  
+* Connect via SFTP using the credentials sent to them in the welcome email
+* View their webspace by pointing their browser at:
+	* http://\<username\>.\<baseDomain\>/
+* Execute PHP scripts in their web space - these scripts have read and write permissions to the webspace so can create and read files anywhere under public_html. If there is a requirement to read/write private data (e.g. configuration files), then these can be put in a subdirectory whose name starts with a dot (e.g. `.private`) - the web server is configured to deny access to any files in any folder whose name starts with a dot.
+* Access their database via the phpmyadmin gui by going to:
+	* http://phpmyadmin.\<baseDomain\>/
+	* Users log in with the MySQL same username and password as they use for SFTP access
+	* N.B. Users can use this interface to change their MySQL password - but if a password reset is later triggered through MUWS then both the Linux and MySQL passwords will be reset to the same new value.
+
+### Administrator functionality
+Administrators can...
+* Connect to the administration interface:
+	* http://manager.\<baseDomain\>/
+	* The "manager" subdomain is configurable (see `MANAGER_USER` in `scripts/multiUserWebServer.conf`)
+	* The password is provided when `scripts/makeUsers.sh` is run for the first time, or when `scripts/resetManagerPassword.sh` is run.
+* Request to view (onscreen) a list of all users and their current passwords
+* Request to download a list of all users and their current passwords
+* Request to reset the password of any given user (by specifying the username)
+	* The user will be sent a new welcome email containing the new password
+	* The password reset is not immediate and will take place when `makeUser.sh` is next run by Cron (every 5 minutes by default)
+	* Both the Linux and MySQL passwords are reset for the specified user
+
 ## TODO
 - Fully automating the install process i.e. converting `setupNotes.txt` to `setup.sh`
 - Enabling and reporting on user disk quota ([This page](https://www.linuxtechi.com/enable-user-group-disk-quota-on-centos-7-rhel-7/) describes this nicely).
-
+- Support for HTTPS (in the original designed use case this was for deployment only on an internal server and will hold no personal or important data, so HTTPS was not required)
+- Provide an interface for users to change their own password
