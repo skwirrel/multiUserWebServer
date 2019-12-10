@@ -84,3 +84,5 @@ Administrators can...
 - Support for HTTPS (in the original designed use case this was for deployment only on an internal server and will hold no personal or important data, so HTTPS was not required)
 - Provide an interface for users to change their own password
 - Add support for a user-specified password in the `resetManagerPassword.sh` script
+- Support for editting email template in management interface
+- Incremental point-in-time backups using rsync
