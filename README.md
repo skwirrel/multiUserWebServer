@@ -1,6 +1,6 @@
 # MUWS - MultiUserWebServer 
 
-Author: Ben Jefferson
+Author: Ben Jefferson  
 Copyright: Huddersfield New College 2019 <http://huddnewcoll.ac.uk/>
 
 MUWS is provided freely as open source software, under the GNU AFFERO GENERAL PUBLIC LICENSE (see LICENSE.txt)
