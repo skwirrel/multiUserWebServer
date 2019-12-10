@@ -22,6 +22,7 @@ MUWS (pronounced "muse") is the result of a commission by [New College Huddersfi
 	* Allow an administrator to trigger password resets for individual users
 	* View/download all of the current passwords for all users
 * Automatic deletion of users who are absent from the specified LDAP group for a period of time
+* Some sort of web interface to provide a management overview of the server ( [Cockpit Project](https://cockpit-project.org/) was selected to provide this)
 
 ## Status
 The code provided here is far from "plug and play" - at present it should be considered more as guidance notes than a finished solution. However we are sharing this code because there is a chance that others may still find it useful and may even then contribute towards improving it.
@@ -69,9 +70,17 @@ Administrators can...
 	* The user will be sent a new welcome email containing the new password
 	* The password reset is not immediate and will take place when `makeUser.sh` is next run by Cron (every 5 minutes by default)
 	* Both the Linux and MySQL passwords are reset for the specified user
+* Run `scripts/resetManagerPassword.sh` to reset the password for administration interface
+* Connec to the Cockpit server management interface by going to:
+	* http://\<serverIpAddress\>:9090/
+	* This requires creating a user on the server command line thus:
+		1. Create the user: `useradd <username> -aG`
+		1. Set their password: `passwd <username>`
+		1. Make them a server administrator: `usermod -aG wheel <username>`
 
 ## TODO
 - Fully automating the install process i.e. converting `setupNotes.txt` to `setup.sh`
 - Enabling and reporting on user disk quota ([This page](https://www.linuxtechi.com/enable-user-group-disk-quota-on-centos-7-rhel-7/) describes this nicely).
 - Support for HTTPS (in the original designed use case this was for deployment only on an internal server and will hold no personal or important data, so HTTPS was not required)
 - Provide an interface for users to change their own password
+- Add support for a user-specified password in the `resetManagerPassword.sh` script
