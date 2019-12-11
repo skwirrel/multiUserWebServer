@@ -1,0 +1,32 @@
+To: $user@$emailUserDomain
+From: $emailFromAddress
+Subject: Your Web Hosting Account 
+Content-Type: text/html; charset="utf8"
+
+<html>
+<body>
+<div style="font-family: arial, sans-serif, helvetica">
+Your student web hosting account is ready to use. Please find the details below:
+
+<h2>Web Site Address</h2>
+<a href="http://$user.$baseDomain/">http://$user.$baseDomain/</a>
+
+<h2>SFTP Credentials</h2>
+<small>You can use these details to upload files to your web space</small><br />
+Host: $user.$baseDomain<br />
+Username: $user<br />
+Password: $password<br />
+
+<h2>MySQL Database Credentials</h2>
+<small>You can use these details in any PHP files you upload to your web space</small><br />
+Host: localhost<br />
+Username: $user<br />
+Password: $password<br />
+<br />
+<small>A web interface to administer your database is available here:</small><br />
+Host: phpmyadmin.$baseDomain<br />
+Username: $user<br />
+Password: $password<br />
+</div>
+</body>
+</html>

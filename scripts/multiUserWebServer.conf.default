@@ -1,0 +1,27 @@
+# EMAIL
+
+emailFromAddress='administrator@domain.ac.uk'
+emailUserDomain='domain.ac.uk'
+smtpServerAddress='mail.domain.ac.uk'
+
+# LDAP Configuration
+
+ldapServer='dc01.local'
+ldapUser='ldapUser'
+ldapPassword='##########'
+ldapGroup='CN=groupContainingUsers,OU=Academia'
+ldapBase='DC=base,DC=local'
+ldapAttribute='attributeName'
+
+# GENERAL
+
+baseDomain=studentweb.local
+PASSWORD_LENGTH=10
+MANAGER_USER=manager
+SKEL_DIR=/home/allUsers/skel
+WEB_DIR=public_html
+SFTP_USER_GROUP=sftpUser
+OLD_USER_DIR=/home/userArchive
+AUTO_GENERATED_FLAG=auto_generated
+MANAGER_DIR="/home/$MANAGER_USER"
+ALL_USER_DIR="/home/allUsers"
