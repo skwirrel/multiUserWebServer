@@ -30,7 +30,7 @@ The code provided here is far from "plug and play" - at present it should be con
 ## Components
 
 The project currently comprises 3 core components:
-1. `setupNotes.txt` - Notes describing how to configure a vanilla "minimal" CentOS 7 server. This largely consists of Bash command and might eventually be converted to a Bash script.
+1. `setupNotes.txt` - Notes describing how to configure a vanilla Debian 12 server. This largely consists of Bash command and might eventually be converted to a Bash script.
 1. `manager/public_html/index.php` - a very basic web interface for managing users (downloading passwords of existing users and triggering password resets)
 1. `scripts/makeUsers.sh` - A bash script to be run from Cron which handles the automatic creation of users (both Linux system users and MySQL users) as well as other ancillary actions such as...
     - Handling password resets
@@ -41,7 +41,7 @@ The project currently comprises 3 core components:
     - Creating a databases for new users
 
 ## Installation
-1. Start with a clean "minimal" CentOS 7 install
+1. Start with a clean Debian 12 install
 2. Work through the instructions in `setupNotes.txt`
 3. Copy `scripts/multiUserWebServer.conf.default` to `scripts/multiUserWebServer.conf` and then edit `scripts/multiUserWebServer.conf` to contain appropriate values
 4. Run `makeUsers.sh` from the command line - this will finish off the installation by installing the neccessary Cron and Apache configuration files
