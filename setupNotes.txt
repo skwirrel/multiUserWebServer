@@ -1,0 +1,165 @@
+
+# =======================================
+# MUWS
+# =======================================
+
+sudo apt-get install git
+cd ~
+git clone https://github.com/skwirrel/multiUserWebServer.git
+
+# =======================================
+# CONFIGURATION 
+# =======================================
+
+cd ~
+mkdir multiUserWebServer
+cat << 'END' >> multiUserWebServer/multiUserWebServer.conf
+# GENERAL
+
+baseDomain='<your value here>'
+
+# EMAIL
+
+emailFromAddress=''
+emailUserDomain=''
+smtpServerAddress=''
+
+# LDAP Configuration
+
+ldapServer=''
+ldapUser=''
+ldapPassword=''
+ldapGroup=''
+ldapBase=''
+END
+
+
+# =======================================
+# INSTALL BASE PACKAGES
+# =======================================
+
+sudo apt-get update && sudo apt-get upgrade -y
+
+sudo apt-get install -y wget mlocate unattended-upgrades net-tools ldap-utils git
+
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+sudo systemctl enable --now unattended-upgrades.service
+
+
+# =======================================
+# APACHE
+# =======================================
+sudo apt-get update
+sudo apt-get install -y apache2 libapache2-mod-php php php-common php-cli php-gd php-curl php-mysql
+sudo systemctl enable apache2
+sudo systemctl start apache2
+
+
+sudo apt-get update
+sudo apt-get install -y mariadb-server mariadb-client
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+
+# Apache mpm-itk - allows each vhost to run as a different user
+sudo apt-get install libapache2-mpm-itk
+sudo a2dismod mpm_worker
+sudo a2dismod mpm_event
+sudo systemctl restart apache2
+
+# =======================================
+# MySQL (MariaDB)
+# =======================================
+
+mysqlPassword=`head /dev/urandom | md5sum |cut -d ' ' -f 1`
+echo
+echo "****************************************************"
+echo "use this password for MySQL: $mysqlPassword";
+echo "****************************************************"
+echo
+echo "Current password should be empty..."
+echo "About to run mysql_secure_installation - press enter to continue"
+read
+
+mysql_secure_installation
+
+cat << END > ~/.my.cnf
+[client]
+user=root
+password=$mysqlPassword
+END
+service mariadb restart
+
+apt-get install phpmyadmin
+
+
+# =======================================
+# PHP Config
+# =======================================
+
+# setting php open_basedir - lock users into their own webspace
+
+mkdir -p /home/allUsers/public_html
+cat << 'END' > /home/allUsers/public_html/autoPrepend.php
+<?php
+    $studentId=getenv('studentId');
+    if (!strlen($studentId)) echo 'No student Id'.exit();
+    
+    $homedir='/home/'.$studentId.'/public_html/';
+    if (!is_dir($homedir)) echo 'No home directory'.exit();
+    ini_set('open_basedir',$homedir);
+END
+chmod o+x /home/allUsers
+chmod o+x /home/allUsers/public_html/
+chmod o+r /home/allUsers/public_html/autoPrepend.php
+echo '<?php $studentId=getenv("studentId"); if (!strlen($studentId)) echo "No student Id".exit(); $homedir="/home/".$studentId; if (!is_dir($homedir)) echo "No home directory".exit(); ini_set("open_basedir",$homedir);' > /home/allUsers/public_html/autoPrepend.php
+
+PHP_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d '.' -f 1,2)
+PHP_INI="/etc/php/$PHP_VERSION/apache2/php.ini"
+
+# Check if `display_errors` is Off in php.ini
+if grep -q "^display_errors = Off" "$PHP_INI"; then
+    echo "Error reporting is disabled. Enabling it now..."
+    
+    # Enable display_errors
+    sudo sed -i 's/^display_errors = Off/display_errors = On/' "$PHP_INI"
+    
+    # Optionally, you might want to adjust error_reporting level, e.g., to E_ALL
+    sudo sed -i 's/^error_reporting = .*/error_reporting = E_ALL/' "$PHP_INI"
+
+    echo "Restarting Apache to apply changes..."
+    sudo systemctl restart apache2
+    echo "Error reporting has been enabled."
+else
+    echo "Error reporting is already enabled or the setting was not found."
+fi
+
+
+# =======================================
+# SFTP
+# =======================================
+
+/usr/sbin/groupadd sftpUser
+
+mkdir -p /home/allUsers/skel/public_html
+chgrp root /home/allUsers/skel/public_html
+chmod 700 /home/allUsers/skel/public_html
+chmod 750 /home/allUsers/skel
+
+if ( ! egrep -q '^# Multiuser Web Server Config' /etc/ssh/sshd_config ); then
+    echo "Updating ssh config"
+    cat << 'END' >> /etc/ssh/sshd_config
+
+        # Multiuser Web Server Config
+        Match Group sftpUser
+            PasswordAuthentication yes
+            ChrootDirectory /home/%u
+            # -m forces permissions on all newly created files
+            # -d sets startup directory
+            # -P setstat,fsetstat = don't let users change the permissions of files
+            ForceCommand internal-sftp -m 600 -d /public_html -P setstat,fsetstat
+            AllowTcpForwarding no
+END
+    service sshd restart
+fi
+
