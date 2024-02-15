@@ -13,7 +13,7 @@ git clone https://github.com/skwirrel/multiUserWebServer.git
 
 cd ~
 mkdir multiUserWebServer
-cat << 'END' >> multiUserWebServer/multiUserWebServer.conf
+cat << 'END' >> multiUserWebServer/scripts/multiUserWebServer.conf
 # GENERAL
 
 baseDomain='<your value here>'
@@ -33,6 +33,7 @@ ldapGroup=''
 ldapBase=''
 END
 
+source multiUserWebServer/scripts/multiUserWebServer.conf
 
 # =======================================
 # INSTALL BASE PACKAGES
@@ -150,16 +151,144 @@ if ( ! egrep -q '^# Multiuser Web Server Config' /etc/ssh/sshd_config ); then
     echo "Updating ssh config"
     cat << 'END' >> /etc/ssh/sshd_config
 
-        # Multiuser Web Server Config
+        # Multiuser Web Server Config 
         Match Group sftpUser
             PasswordAuthentication yes
             ChrootDirectory /home/%u
-            # -m forces permissions on all newly created files
-            # -d sets startup directory
+            # -m forces permissions on all newly created files - Doesn't seem to be supported on Debian
+            # -u 0077 make all files uploaded readable only by the user themselves
+            # -d sets startup directory - Doesn't seem to be work on Debian
             # -P setstat,fsetstat = don't let users change the permissions of files
-            ForceCommand internal-sftp -m 600 -d /public_html -P setstat,fsetstat
+            ForceCommand internal-sftp -u 0077 -d /public_html -P setstat,fsetstat
             AllowTcpForwarding no
 END
     service sshd restart
 fi
+
+# =======================================
+# APACHE CONFIG
+# =======================================
+# Put the apache config in place if it isn't there already...
+
+APACHE_CONFIG="/etc/apache2/sites-available/multiUserWebServer.conf"
+escapedDomain=`echo $baseDomain |  sed 's/\./\\\\./g'`
+if [ ! -e "$APACHE_CONFIG" ]; then
+        cat << END > "$APACHE_CONFIG"
+<VirtualHost *:80>
+        # Multiuser Web Server Config
+        UseCanonicalName Off
+
+        <Directory "/home/*/public_html">
+            Require all granted
+            Options -Indexes -FollowSymLinks +SymLinksIfOwnerMatch
+            AllowOverride All Options=ExecCGI,Includes,IncludesNOEXEC,Indexes,MultiViews,SymLinksIfOwnerMatch
+            DirectoryIndex index.html index.php _default_index.html
+        </Directory>
+
+        <FilesMatch "^\.">
+            Require all denied
+        </FilesMatch>
+        <DirectoryMatch "/\.">
+            Require all denied
+        </DirectoryMatch>
+
+        Alias "/_default_index.html" "/home/allUsers/public_html/_default_index.html"
+
+        RewriteMap lowercase int:tolower
+
+        RewriteEngine on
+        RewriteCond "${lowercase:%{HTTP_HOST}}" ^(.+)$escapedDomain$
+        RewriteCond %{REQUEST_URI} !^/_default_index\.html$
+        RewriteRule "^(.*)" "/home/%1/public_html$1" [E=StudentId:%1]
+
+        AssignUserIDExpr %{reqenv:StudentId}
+        AssignGroupIDExpr %{reqenv:StudentId}
+        php_admin_value auto_prepend_file "/home/allUsers/public_html/autoPrepend.php"
+</VirtualHost>
+
+LimitUIDRange 1000 9000
+# Enabling this cause Apache to crash on startup so had to disable it
+EnableCapabilities Off
+END
+fi
+
+APACHE_CONFIG="/etc/apache2/sites-available/phpmyadmin.conf"
+if [ ! -e "$APACHE_CONFIG" ]; then
+        cat << END > "$APACHE_CONFIG"
+
+<VirtualHost *:80>
+        ServerName phpmyadmin.$baseDomain
+        DocumentRoot /usr/share/phpmyadmin/
+
+	AssignUserIDExpr phpmyadmin
+        AssignGroupIDExpr phpmyadmin
+
+        <Directory /usr/share/phpmyadmin/>
+           AddDefaultCharset UTF-8
+
+           <IfModule mod_authz_core.c>
+             # Apache 2.4
+             <RequireAny>
+               Require ip 10.
+             </RequireAny>
+           </IfModule>
+        </Directory>
+
+        <Directory /usr/share/phpmyadmin/setup/>
+           <IfModule mod_authz_core.c>
+             # Apache 2.4
+             <RequireAny>
+               Require ip 10.
+             </RequireAny>
+           </IfModule>
+        </Directory>
+
+        # These directories do not require access over HTTP - taken from the original
+        # phpmyadmin upstream tarball
+        #
+        <Directory /usr/share/phpmyadmin/libraries/>
+            Order Deny,Allow
+            Deny from All
+            Allow from None
+        </Directory>
+
+        <Directory /usr/share/phpmyadmin/setup/lib/>
+            Order Deny,Allow
+            Deny from All
+            Allow from None
+        </Directory>
+
+        <Directory /usr/share/phpmyadmin/setup/frames/>
+            Order Deny,Allow
+            Deny from All
+            Allow from None
+        </Directory>
+
+        # This configuration prevents mod_security at phpmyadmin directories from
+        # filtering SQL etc.  This may break your mod_security implementation.
+        #
+        #<IfModule mod_security.c>
+        #    <Directory /usr/share/phpmyadmin/>
+        #        SecRuleInheritance Off
+        #    </Directory>
+        #</IfModule>
+</VirtualHost>
+
+END
+fi
+
+a2ensite phpmyadmin.conf
+a2ensite multiUserWebServer.conf
+
+service apache2 restart
+
+
+
+# =======================================
+# Final tweaks 
+# =======================================
+touch /var/lib/phpmyadmin/blowfish_secret.inc.php
+chgrp phpmyadmin /var/lib/phpmyadmin/blowfish_secret.inc.php
+chgrp phpmyadmin /etc/phpmyadmin/config-db.php
+
 
